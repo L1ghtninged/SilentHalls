@@ -1,0 +1,135 @@
+﻿using Assembly_CSharp;
+using UnityEngine;
+using System.Collections.Generic;
+
+public class AIScript : MonoBehaviour
+{
+    PositionScript position;
+    float moveDelay = 1f;
+    float activationRange = 4f; // Vzdálenost pro aktivaci pohybu k hráči
+    float attackRange = 1f; // Vzdálenost pro útok
+    float currentTimer = 0f;
+    GameObject player;
+    PositionScript playerPosition;
+    AttackScript attackScript;
+
+    void Start()
+    {
+        position = GetComponent<PositionScript>();
+        player = GameObject.FindGameObjectWithTag("Player");
+        playerPosition = player.GetComponent<PositionScript>();
+        attackScript = GetComponent<AttackScript>();
+
+        if (position == null) Debug.LogError("PositionScript is null");
+        if (player == null) Debug.LogError("Player is null");
+        if (playerPosition == null) Debug.LogError("Player PositionScript is null");
+    }
+
+    void Update()
+    {
+        currentTimer += Time.deltaTime;
+        if (position.gridMovement.isMoving) 
+        {
+            position.gridMovement.MovePlayer();
+            return;
+        }
+
+        else if (currentTimer >= moveDelay)
+        {
+            currentTimer = 0f;
+            DecideMovement();
+        }
+    }
+
+    private void DecideMovement()
+    {
+        float distanceToPlayer = Mathf.Abs(position.x - playerPosition.x) + Mathf.Abs(position.y - playerPosition.y);
+
+        if (distanceToPlayer <= attackRange)
+        {
+            attackScript.AttackPlayer();
+        }
+        else if (distanceToPlayer <= activationRange)
+        {
+            int direction = MoveTowardsPlayer();
+            position.Move(direction);
+        }
+        else
+        {
+            int direction = MoveRandomly();
+            position.Move(direction);
+        }
+    }
+
+    private int MoveRandomly()
+    {
+        List<int> availableDirections = new List<int>();
+
+        for (int direction = 0; direction < 4; direction++)
+        {
+            if (IsDirectionValid(direction))
+            {
+                availableDirections.Add(direction);
+            }
+        }
+
+        if (availableDirections.Count > 0)
+        {
+            return availableDirections[Random.Range(0, availableDirections.Count)];
+        }
+
+        return 0;
+    }
+
+    private int MoveTowardsPlayer()
+    {
+        int bestDirection = 0;
+        float bestDistance = float.MaxValue;
+
+        for (int direction = 0; direction < 4; direction++)
+        {
+            if (IsDirectionValid(direction))
+            {
+                Vector2Int newPos = GetNewPosition(direction);
+                float distance = Mathf.Abs(newPos.x - playerPosition.x) + Mathf.Abs(newPos.y - playerPosition.y);
+
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestDirection = direction;
+                }
+            }
+        }
+
+        return bestDirection;
+    }
+
+    private bool IsDirectionValid(int direction)
+    {
+        Vector2Int newPos = GetNewPosition(direction);
+        
+        if (newPos.x < 0 || newPos.x >= EntityPositions.width || 
+            newPos.y < 0 || newPos.y >= EntityPositions.height)
+        {
+            return false;
+        }
+
+        return !EntityPositions.IsOccupied(newPos.x, newPos.y);
+    }
+
+    private Vector2Int GetNewPosition(int direction)
+    {
+        int x = position.x;
+        int y = position.y;
+
+        switch (direction)
+        {
+            case 0: y++; break; // Sever
+            case 1: x++; break; // Východ
+            case 2: y--; break; // Jih
+            case 3: x--; break; // Západ
+        }
+
+        return new Vector2Int(x, y);
+    }
+}

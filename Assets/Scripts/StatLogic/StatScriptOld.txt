@@ -1,0 +1,184 @@
+
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
+using UnityEngine;
+using UnityEngine.UI;
+using static WeaponItem;
+
+public class StatScript : MonoBehaviour
+{
+    public int maxHealth = 100;
+    public int currentHealth;
+    public int maxMana = 100;
+    public int currentMana;
+    public int maxExperience = 100;
+    public int currentExperience;
+    public int maxStamina = 100;
+    public int currentStamina;
+    public Slider healthSlider;
+    public Slider manaSlider;
+    public Slider expSlider;
+    public Slider staminaSlider;
+    public InputManagerScript inputMangager;
+
+    public int level;
+    private InGameUIScript inGameUI;
+
+
+    public int strength = 1;
+    public int dexterity = 1;
+    public int magic = 1;
+
+    public int accuracy;
+
+    public int resistFire;
+    public int resistIce;
+
+    public int defence = 1;
+
+    public int skillPoints = 0;
+
+    void Start()
+    {
+        inGameUI = GameObject.FindGameObjectWithTag("InGameUI").GetComponent<InGameUIScript>();
+        currentHealth = maxHealth;
+        healthSlider.maxValue = maxHealth;
+        healthSlider.value = currentHealth;
+
+        currentMana = maxMana;
+        manaSlider.maxValue = maxMana;
+        manaSlider.value = currentMana;
+
+        currentStamina = maxStamina;
+        staminaSlider.maxValue = maxStamina;
+        staminaSlider.value = currentStamina;
+
+        currentExperience = 0;
+        expSlider.maxValue = maxExperience;
+        expSlider.value = currentExperience;
+        inGameUI.UpdateTexts();
+    }
+    public void TakeDamage(int damage)
+    {
+        currentHealth -= damage;
+        healthSlider.value = currentHealth;
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+        inGameUI.UpdateTexts();
+    }
+    public void HealDamage(int health)
+    {
+
+        currentHealth += health;
+        if(currentHealth > maxHealth)
+        {
+            currentHealth = maxHealth;
+        }
+        healthSlider.value = currentHealth;
+        
+        inGameUI.UpdateTexts();
+    }
+
+    public void DecreaseMana(int amount)
+    {
+        currentMana -= amount;
+        if (currentMana < 0) currentMana = 0;
+
+        manaSlider.value = currentMana;
+        inGameUI.UpdateTexts();
+    }
+    public void IncreaseMana(int amount)
+    {
+        currentMana += amount;
+        if (currentMana > maxMana) currentMana = maxMana;
+        manaSlider.value = currentMana;
+        inGameUI.UpdateTexts();
+    }
+    public void DecreaseStamina(int amount)
+    {
+        currentStamina -= amount;
+        if (currentMana < 0) currentMana = 0;
+
+        manaSlider.value = currentMana;
+        inGameUI.UpdateTexts();
+    }
+    public void IncreaseStamina(int amount)
+    {
+        currentMana += amount;
+        if (currentMana > maxMana) currentMana = maxMana;
+        manaSlider.value = currentMana;
+        inGameUI.UpdateTexts();
+    }
+    void Die()
+    {
+        inputMangager.GameOver();
+    }
+
+    public int GetPrefferedAttribute(WeaponItem weapon)
+    {
+        int attackBonus = 1;
+        switch (weapon.damageType)
+        {
+            case DamageType.Physical:
+                attackBonus = strength;
+                break;
+            case DamageType.Ranged:
+                attackBonus = dexterity;
+                break;
+            case DamageType.Magical:
+                attackBonus = magic;
+                break;
+            default:
+                Debug.LogError("Damage type is default");
+                break;
+        }
+        return attackBonus;
+
+    }
+    public void ModifyDefence(int value)
+    {
+        Debug.Log("Value:" + value);
+        defence += value;
+        inGameUI.UpdateTexts();
+    }
+
+    public void NewLevel()
+    {
+        level++;
+        skillPoints++;
+        inGameUI.UpdateTexts();
+        SoundManager.Instance.PlayLevelUp();
+    }
+    public bool ShouldLevelUp()
+    {
+        if(currentExperience >= maxExperience) return true;
+        return false;
+    }
+
+    public int GetMaxLevelExperience()
+    {
+        if (level == 1) return 100;
+        return (level-1) * 500;
+    }
+    public void ModifyExperience(int value)
+    {
+        currentExperience += value;
+        while (ShouldLevelUp())
+        {
+            currentExperience -= maxExperience;
+            maxHealth += 10 + 5*level;
+            maxMana += 10 + 5*level;
+            NewLevel();
+            maxExperience = GetMaxLevelExperience();
+        }
+        expSlider.maxValue = maxExperience;
+        expSlider.value = currentExperience;
+        inGameUI.UpdateTexts();
+        Debug.Log("current:"+currentExperience);
+        Debug.Log("max:"+maxExperience);
+    }
+
+
+}

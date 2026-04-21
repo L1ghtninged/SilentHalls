@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 655463bd8ea597646ac2f8aa5d6b41ce, type: 3}
+  m_Name: LightningMastery
+  m_EditorClassIdentifier: 
+  skillID: 15
+  skillName: Lightning mastery
+  description: Increases damage dealt with lightning
+  icon: {fileID: 21300000, guid: da1e967e5e1af4a469f01e4980ed57a7, type: 3}
+  branch: 1
+  tier: 0
+  maxLevel: 1
+  prerequisites: []
+  requiredPointsInBranch: 0
+  requiredPlayerLevel: 0
+  effects:
+    flatDamage: 3
+    percentDamage: 0
+    critChance: 0
+    critMultiplier: 0
+    flatDefence: 0
+    percentDefence: 0
+    blockChance: 0
+    resistFire: 5
+    resistIce: 0
+    resistLightning: 0
+    flatHealth: 0
+    percentHealth: 0
+    flatMana: 0
+    percentMana: 0
+    flatStamina: 0
+    percentStamina: 0
+    dodgeChance: 0
+    movementSpeed: 0
+    attackSpeed: 0
+    swordMastery: 0
+    axeMastery: 0
+    maceMastery: 0
+    bowMastery: 0
+    daggerMastery: 0
+    crossbowMastery: 0
+    fireMastery: 0
+    iceMastery: 0
+    lightningMastery: 10

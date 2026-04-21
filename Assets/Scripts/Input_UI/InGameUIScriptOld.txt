@@ -1,0 +1,83 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
+
+public class InGameUIScript : MonoBehaviour
+{
+    private StatScript stats;
+
+    public TextMeshProUGUI levelText;
+    public TextMeshProUGUI healthText;
+    public TextMeshProUGUI manaText;
+    public TextMeshProUGUI defenceText;
+    public TextMeshProUGUI strengthText;
+    public TextMeshProUGUI dexterityText;
+    public TextMeshProUGUI magicText;
+    public TextMeshProUGUI accuracyText;
+    public TextMeshProUGUI resistFireText;
+    public TextMeshProUGUI resistIceText;
+    public GameObject levelUpGUI;
+    public TextMeshProUGUI skillPoints;
+
+
+    void Start()
+    {
+        UpdateTexts();
+    }
+
+    public void UpdateTexts()
+    {
+        if(stats == null) stats = GameObject.FindGameObjectWithTag("Player").GetComponent<StatScript>();
+        if(stats.skillPoints == 0)
+        {
+            levelUpGUI.active = false;
+        }
+        else
+        {
+            levelUpGUI.SetActive(true);
+            skillPoints.text = "Skillpoints: "+stats.skillPoints;
+        }
+        string level = "Level: " + stats.level;
+        string health = "Health: " + stats.currentHealth + "/" + stats.maxHealth;
+        string mana = "Mana: " + stats.currentMana + "/" + stats.maxMana;
+        string defence = "Defence: " + stats.defence;
+
+        string strength = "Strength: " + stats.strength;
+        string dexterity = "Dexterity: " + stats.dexterity;
+        string magic = "Magic: " + stats.magic;
+
+        string accuracy = "Accuracy: "+stats.accuracy;
+        string resistFire = "Resist fire: " + stats.resistFire + "%";
+        string resistIce = "Resist ice: "+ stats.resistIce + "%";
+
+        levelText.text = level;
+        healthText.text = health;
+        manaText.text = mana;
+        defenceText.text = defence;
+        strengthText.text = strength;
+        dexterityText.text = dexterity;
+        magicText.text = magic;
+        accuracyText.text = accuracy;
+        resistFireText.text = resistFire;
+        resistIceText.text = resistIce;
+    }
+    public void AddDexterity(StatScript statScript)
+    {
+        statScript.dexterity++;
+        statScript.skillPoints--;
+        UpdateTexts();
+    }
+    public void AddStrength(StatScript statScript)
+    {
+        statScript.strength++;
+        statScript.skillPoints--;
+        UpdateTexts();
+    }
+    public void AddMagic(StatScript statScript)
+    {
+        statScript.magic++;
+        statScript.skillPoints--;
+        UpdateTexts();
+    }
+}

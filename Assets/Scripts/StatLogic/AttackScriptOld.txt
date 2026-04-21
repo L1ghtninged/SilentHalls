@@ -1,0 +1,299 @@
+using System;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
+using UnityEngine;
+using static WeaponItem;
+
+public class AttackScript : MonoBehaviour
+{
+    public const int attackDamage = 25;
+    public float attackRange = 10f;
+    public float coolDown = 3;
+    public float timeRemaining = 0;
+    private PositionScript positionScript;
+    private StatScript stats;
+    private EnemyStatScript enemyStatScript;
+    public GameObject castPointObject;
+
+    void Start()
+    {
+        positionScript = GetComponent<PositionScript>();
+        stats = GetComponent<StatScript>();
+        enemyStatScript = GetComponent<EnemyStatScript>();
+    }
+
+    public void Attack(WeaponItem weaponItem)
+    {
+        Debug.Log("Attacked");
+        Vector3 attackDirection = GetAttackDirection();
+
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, attackDirection, out hit, attackRange))
+        {
+            var enemyStats = hit.collider.GetComponent<EnemyStatScript>();
+            if (enemyStats != null)
+            {
+                int attack = EvaluateAttack(weaponItem, enemyStats);
+                Debug.Log("Damage taken: "+ attack);
+
+                enemyStats.TakeDamage(attack);
+            }
+        }
+        stats.DecreaseMana(weaponItem.manaCost);
+    }
+    public void CastSpell(WeaponItem weapon)
+    {
+        if (weapon.spellPrefab == null) return;
+
+        Transform castPoint = castPointObject.transform;
+        GameObject spellGO = Instantiate(weapon.spellPrefab, castPoint.position, castPoint.rotation);
+
+        // Inicializuj smìr – používáme forward v místì, odkud spell vychází
+        ProjectileSpell spell = spellGO.GetComponent<ProjectileSpell>();
+        int lowerAttack = weapon.lowValue * stats.magic;
+        int higherAttack = weapon.highValue * stats.magic;
+
+        spell.lowerValue = lowerAttack;
+        spell.upperValue = higherAttack;
+        if (spell != null)
+        {
+            Vector3 direction = castPoint.forward;
+            spell.Initialize(direction);
+        }
+        else
+        {
+            Debug.LogWarning("Spell prefab does not have ProjectileSpell component!");
+        }
+
+        stats.DecreaseMana(weapon.manaCost);
+    }
+
+
+
+    public void AttackPlayer()
+    {
+        Debug.Log("Attacked");
+        Vector3 attackDirection = GetAttackDirection();
+
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, attackDirection, out hit, attackRange))
+        {
+            var enemyStats = hit.collider.GetComponent<StatScript>();
+            if (enemyStats != null)
+            {
+                int attack = EvaluateAttackEnemy(enemyStatScript, enemyStats);
+                enemyStats.TakeDamage(attack);
+                return;
+            }
+            var friendlyStats = hit.collider.GetComponent<EnemyStatScript>();
+            if(friendlyStats != null)
+            {
+                friendlyStats.TakeDamage(attackDamage);
+                return;
+            }
+        }
+    }
+
+    Vector3 GetAttackDirection()
+    {
+        switch (positionScript.orientationIndex)
+        {
+            case 0: return Vector3.forward;  // Sever
+            case 1: return Vector3.right;   // Východ
+            case 2: return Vector3.back;    // Jih
+            case 3: return Vector3.left;    // Západ
+            default: return Vector3.forward;
+        }
+    }
+    public int CalculateLowerDamage(WeaponItem weaponItem, EnemyStatScript enemyStats)
+    {
+        int attackBonus = 1;
+        switch (weaponItem.damageType)
+        {
+            case DamageType.Physical:
+                attackBonus = stats.strength;
+                break;
+            case DamageType.Ranged:
+                attackBonus = stats.dexterity;
+                break;
+            case DamageType.Magical:
+                attackBonus = stats.magic;
+                break;
+            default: 
+                Debug.LogError("Damage type is default");
+                break;
+        }
+        int lowerDamage = (int)(weaponItem.lowValue * (1 + 0.25 * attackBonus) - enemyStats.defence);
+
+        Debug.Log("Lower damage: " + lowerDamage);
+
+        return Math.Max(lowerDamage, 0);
+    }
+    public int CalculateUpperDamage(WeaponItem weaponItem, EnemyStatScript enemyStats)
+    {
+        int attackBonus = stats.GetPrefferedAttribute(weaponItem);
+        Debug.Log("Attack bonus: "+attackBonus);
+        int upperDamage = (int)(weaponItem.highValue * (1 + 0.25*attackBonus) - enemyStats.defence);
+
+        Debug.Log("Upper damage: "+upperDamage);
+        Debug.Log("Upper damage: "+upperDamage);
+
+        return Math.Max(upperDamage, 0);
+    }
+
+    public int EvaluateAttack(WeaponItem weaponItem, EnemyStatScript enemyStats)
+    {
+        int attack = GetRandomNumber(CalculateLowerDamage(weaponItem, enemyStats), CalculateUpperDamage(weaponItem, enemyStats));
+        Debug.Log(attack);
+        if (RandomChance(weaponItem.critChance)) attack *= 2;
+
+        return attack;
+    }
+
+    public int EvaluateAttackEnemy(EnemyStatScript stats, StatScript playerStats)
+    {
+        int lowerDamage = stats.attackLower - playerStats.defence;
+        int higherDamage = stats.attackHigher - playerStats.defence;
+        lowerDamage = Math.Max(lowerDamage, 0);
+        higherDamage = Math.Max(higherDamage, 0);
+
+
+        return (int)(GetRandomNumber(lowerDamage, higherDamage) * Math.Pow(1.5, stats.level -1));
+    }
+
+    public static int GetRandomNumber(int lower, int higher)
+    {
+        return UnityEngine.Random.Range(lower, higher+1);
+    }
+    public static bool RandomChance(int prob)
+    {
+        //1-100
+        int num = GetRandomNumber(1, 100);
+        return num <= prob;
+    }
+    
+}
+Kdyžtak WeaponItem mám zde:
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Rendering;
+using UnityEngine.UI;
+
+[CreateAssetMenu(fileName = "New Weapon", menuName = "Inventory/Weapon")]
+public class WeaponItem : Item
+{
+    [Header("Weapon Specific Stats")]
+    public const int probabilityConstant = 25;
+    public int lowValue;
+    public int highValue;
+    public float attackSpeed = 1f;
+    public DamageType damageType;
+    public MagicType magicType;
+    public int critChance = 2;
+
+    public GameObject spellPrefab;
+
+    public enum DamageType {Physical, Ranged, Magical}
+    public enum MagicType {None, Fire, Ice, Lightning}
+
+    private void OnEnable()
+    {
+        itemType = ItemType.Weapon;
+    }
+
+    public override void Use(ScriptManager manager)
+    {
+        if (manager.gameUIManager.isInventoryOpened)
+        {
+            Equip();
+        }
+        else
+        {
+            if (AttackSuccess(manager))
+            {
+                if (damageType == DamageType.Magical && magicType != MagicType.None && spellPrefab != null)
+                {
+                    // Odpaluješ kouzlo
+                    GameObject.FindGameObjectWithTag("Player").GetComponent<AttackScript>().CastSpell(this);
+                }
+                else
+                {
+                    SoundManager.Instance.PlayAttack();
+                    GameObject.FindGameObjectWithTag("Player").GetComponent<AttackScript>().Attack(this);
+                }
+                
+            }
+            else
+            {
+                Debug.Log("Not enough mana!");
+            }
+        }
+        
+    }
+
+    public override string GetTooltip()
+    {
+        string tooltip = base.GetTooltip();
+        tooltip += $"Attack: {lowValue}-{highValue}\n";
+        tooltip += $"Attack Speed: {attackSpeed}\n";
+        return tooltip;
+    }
+    public void Equip()
+    {
+
+    }
+    
+    
+
+    public bool AttackSuccess(ScriptManager manager)
+    {
+        return manager.playerStats.Mana.CurrentValue >= manaCost;
+    }
+
+}
+A tady Item:
+using UnityEngine;
+using UnityEngine.UI;
+
+[CreateAssetMenu(fileName = "New Item", menuName = "Inventory/Item")]
+public abstract class Item : ScriptableObject
+{
+    [Header("Basic Item Settings")]
+    public string itemName = "New Item";
+    public ItemType itemType;
+    [TextArea] public string description;
+    public Sprite sprite; 
+    /*public bool isStackable = false;
+    public int maxStack = 1;
+    */
+    [Header("Common Stats")]
+    public int manaCost = 0;
+    public int healthEffect = 0;
+    public int manaEffect = 0;
+
+
+    public abstract void Use(ScriptManager player);
+
+    public virtual string GetTooltip()
+    {
+        string tooltip = $"<b>{itemName}</b>\n{description}\n";
+
+        if (manaCost > 0) tooltip += $"Mana Cost: {manaCost}\n";
+        if (healthEffect != 0) tooltip += $"Health: {healthEffect}\n";
+        if (manaEffect != 0) tooltip += $"Mana: {manaEffect}\n";
+
+        return tooltip;
+    }
+
+}
+public enum ItemType
+{
+    None,
+    Weapon,
+    Potion,
+    Armor,
+    Key,
+    Food
+
+
+
+}

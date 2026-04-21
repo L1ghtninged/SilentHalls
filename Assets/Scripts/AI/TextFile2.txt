@@ -1,0 +1,213 @@
+﻿using Assembly_CSharp;
+using UnityEngine;
+using System.Collections.Generic;
+using UnityEngine.UIElements;
+using System.Collections;
+using System;
+
+public class AIScript : MonoBehaviour
+{
+
+    public float moveDelay = 1f;
+    public float attackCooldown = 1f;
+    public int maxDistanceToPlayer = 10;
+    public int attackDistanceToPlayer = 1;
+    public State state = State.Idle;
+
+    private float currentTimer = 0f;
+    private float attackTimer = 0f;
+    PositionScript position;
+    GameObject playerObject;
+    PositionScript playerPosition;
+    AttackScript enemyAttackScript;
+    private bool isRotating = false;
+    private float currentRotationY = 0f;
+    private void Start()
+    {
+        position = GetComponent<PositionScript>();
+        playerObject = GameObject.FindGameObjectWithTag("Player");
+        playerPosition = playerObject.GetComponent<PositionScript>();
+        enemyAttackScript = GetComponent<AttackScript>();
+    }
+    private void Update()
+    {
+        if (state == State.Attack)
+        {
+            attackTimer += Time.deltaTime;
+            if (attackTimer >= attackCooldown)
+            {
+                enemyAttackScript.AttackPlayer();
+                attackTimer = 0f;
+            }
+            int distanceToPlayer = Math.Abs(position.x - playerPosition.x) + Math.Abs(position.y - playerPosition.y);
+            if (distanceToPlayer > attackDistanceToPlayer) { state = State.Chase; attackTimer = 0f;}
+            if (state != State.Attack) return;
+        }
+
+        currentTimer += Time.deltaTime;
+        if (position.gridMovement.isMoving)
+        {
+            position.gridMovement.MovePlayer();
+            return;
+        }
+        else if (currentTimer >= moveDelay)
+        {
+            currentTimer = 0f;
+            if (!isRotating)
+            {
+                int distanceToPlayer;
+                int correctDirection;
+                switch (state)
+                {
+
+                    case State.Idle:
+                        correctDirection = UnityEngine.Random.Range(0, 4);
+                        if(correctDirection == position.orientationIndex && IsDirectionValid(correctDirection))
+                        {
+                            position.Move(0);
+                        }
+                        else
+                        {
+                            RotateProperly(correctDirection, position.orientationIndex);
+                        }
+                        distanceToPlayer = Math.Abs(position.x - playerPosition.x) + Math.Abs(position.y - playerPosition.y);
+                        if (distanceToPlayer <= maxDistanceToPlayer) state = State.Chase;
+                        break;
+                    case State.Chase:
+                        correctDirection = GetCorrectDirection();
+                        if(correctDirection == position.orientationIndex)
+                        {
+                            position.Move(0);
+                        }
+                        else
+                        {
+                            RotateProperly(correctDirection, position.orientationIndex);
+                        }
+                        distanceToPlayer = Math.Abs(position.x - playerPosition.x) + Math.Abs(position.y - playerPosition.y);
+                        if (distanceToPlayer > maxDistanceToPlayer) state = State.Idle;
+                        else if(distanceToPlayer <= attackDistanceToPlayer)
+                        {
+                            state = State.Attack;
+                        }
+                        break;
+                    case State.Attack:
+                        correctDirection = GetCorrectDirection();
+                        if (correctDirection != position.orientationIndex) RotateProperly(correctDirection, position.orientationIndex);
+                        break;
+                }
+            }
+        }
+
+
+    }
+
+    private void RotateProperly(int correctDirection, int orientation)
+    {
+        if (Math.Abs(correctDirection - orientation) == 2)
+        {
+            position.TurnLeft();
+            RotateCamera(-90f);
+        }
+        else if (correctDirection - orientation == -3)
+        {
+            position.TurnRight();
+            RotateCamera(-90f);
+        }
+        else if (correctDirection - orientation == 3)
+        {
+            position.TurnLeft();
+            RotateCamera(90f);
+        }
+        else if (correctDirection - orientation == -1)
+        {
+            position.TurnLeft();
+            RotateCamera(-90f);
+        }
+        else if (correctDirection - orientation == 1)
+        {
+            position.TurnRight();
+            RotateCamera(90f);
+        }
+    }
+    private int GetCorrectDirection()
+    {
+        int bestDirection = 0;
+        float bestDistance = float.MaxValue;
+
+        for (int direction = 0; direction < 4; direction++)
+        {
+
+            if (IsDirectionValid(direction))
+            {
+                Vector2Int newPos = GetNewPosition(direction);
+                float distance = Mathf.Abs(newPos.x - playerPosition.x) + Mathf.Abs(newPos.y - playerPosition.y);
+
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestDirection = direction;
+                }
+            }
+
+        }
+
+        return bestDirection;
+    }
+
+    private bool IsDirectionValid(int direction)
+    {
+        Vector2Int newPos = GetNewPosition(direction);
+
+        if (newPos.x < 0 || newPos.x >= EntityPositions.width ||
+            newPos.y < 0 || newPos.y >= EntityPositions.height)
+        {
+            return false;
+        }
+
+        return !EntityPositions.IsOccupied(newPos.x, newPos.y);
+    }
+    private Vector2Int GetNewPosition(int direction)
+    {
+        int x = position.x;
+        int y = position.y;
+
+        switch (direction)
+        {
+            case 0: y++; break; // Sever
+            case 1: x++; break; // Východ
+            case 2: y--; break; // Jih
+            case 3: x--; break; // Západ
+        }
+
+        return new Vector2Int(x, y);
+    }
+
+    private IEnumerator SmoothRotate(Transform target, Quaternion targetRotation, float duration)
+    {
+        isRotating = true;
+        Quaternion startRotation = target.rotation;
+        float elapsedTime = 0f;
+
+        while (elapsedTime < duration)
+        {
+            target.rotation = Quaternion.Lerp(startRotation, targetRotation, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        target.rotation = targetRotation;
+        isRotating = false;
+    }
+    void RotateCamera(float angle)
+    {
+        currentRotationY += angle;
+        StartCoroutine(SmoothRotate(transform, Quaternion.Euler(0, currentRotationY, 0), 0.2f));
+    }
+
+}
+public enum State
+{
+    Idle,
+    Chase,
+    Attack,
+}

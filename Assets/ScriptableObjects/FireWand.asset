@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5972d5e2d93aecc4d90456162b32610b, type: 3}
+  m_Name: FireWand
+  m_EditorClassIdentifier: 
+  itemName: FireWand
+  itemType: 1
+  description: This wand casts fireball
+  sprite: {fileID: -2120775787, guid: 83bf93558b0ec514a95bd6edcd67f7ac, type: 3}
+  manaCost: 20
+  healthEffect: 0
+  manaEffect: 0
+  lowValue: 7
+  highValue: 12
+  attackSpeed: 3.5
+  damageType: 2
+  magicType: 1
+  critChance: 0
+  spellPrefab: {fileID: 3280059572097094849, guid: f2a73ceb27e4ba94ea1d7015b9c3bf39, type: 3}
